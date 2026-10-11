@@ -1,111 +1,98 @@
 # zcode-unrestricted
 
-这份交付安装到已有的 Windows 桌面 ZCode。首次安装给它的 Agent 加一个小型、
-可恢复的 Hook；日常仍从原来的 ZCode 快捷方式进入。
+用于 Windows 桌面版 ZCode 的系统提示词替换插件。通过可恢复的 Agent 桥接补丁接入原版 ZCode，在插件设置中管理开关和提示词文件，文件修改与开关变化在下一轮对话生效。
 
-当前适配 **Desktop 3.14.4.7912**，同时校验 Agent 原始 SHA-256。其他版本拒绝
-修改，需要另行适配。开发范围和验收见 [docs/design.md](docs/design.md)。
+模型连接、工具和权限设置沿用原版 ZCode 的配置。
 
-当前版本 **0.3.0**。从旧名 `dsh-unrestricted` 升级：先完全退出 ZCode，再运行
-`install.cmd`。安装器识别已校验的旧补丁，迁移用户级开关和文件选项，保留默认正文及
-原始备份；已有的新默认正文不会被覆盖。工作区专属设置需在原版 UI 对新名称重新设置。
-`status.cmd` 显示 `legacy_mounted` 时，说明本机仍运行旧名版本，不表示覆盖失效。
+**插件版本：0.3.0 · 适配 ZCode Desktop：3.14.4.7912 · 许可证：MIT**
 
-第一次使用先看 [配置与使用说明](docs/usage.md)，了解各目录和文件看
-[项目目录说明](docs/project-layout.md)。`docs/design.md` 讲实现原理，
-`docs/validation.md` 记录测试范围，二者不代替操作手册。
+## 安装
 
-## 你现在应该怎样配置
+从源码使用需要 **Node.js 24**，并确保命令行可以运行 `node`。如果交付包内包含 `tools/runtime/node.exe`，脚本会优先使用它。无需安装 npm 依赖。
 
-已安装补丁后，在原版 ZCode 的插件管理中找到 **zcode-unrestricted**，打开详情，
-展开 **高级信息**，找到 **配置 → 系统提示词文件**。这是 `promptFile` 字段，
-填写提示词文件的路径。例如使用本项目改写的提示词：
+1. 下载或克隆本仓库，进入项目目录。
+2. 完全退出 ZCode，包括托盘和后台进程。
+3. 双击 `install.cmd`。安装器检查 Agent 版本、备份原文件并安装桥接补丁；首次安装默认关闭插件。
+4. 双击 `edit-prompt.cmd`，将默认示例改为自己的提示词，保存为 UTF-8。
+5. 按平时的方式打开 ZCode，在插件管理中开启 **zcode-unrestricted**，发送下一轮消息。
 
-```text
-D:\Work\Zcode\zcode-unrestricted\docs\test.md
+安装器会校验原始 Agent 的 SHA-256，未适配版本或未知修改会被拒绝。仅通过插件管理导入插件目录，无法完成宿主桥接安装。
+
+ZCode 安装在其他位置时，可在终端指定目录：
+
+```powershell
+.\install.cmd --app-dir "D:\Apps\ZCode"
 ```
 
-输入框内只填这一行路径，不加引号、不粘贴提示词正文，也不粘贴 JSON。
-点击 **保存配置**，开启插件，再发送下一轮消息。一般选择 **用户 / User** 范围；
-如果只针对某个项目使用，选择那个 **工作区 / Workspace**，注意工作区配置会覆盖用户配置。
+其他脚本也支持 `--app-dir`，填写实际安装目录即可。
 
-随后运行 `status.cmd`：`state=mounted` 表示补丁文件校验通过；
-`lastTurn.state=active` 表示最近一轮成功解析了提示词。若为 `error`，查看
-`lastTurn.code`，不要根据模型对自己提示词的描述判断是否加载。
+## 配置提示词
 
-`docs/test.md` 是可选提示词文件，修改它不会自动修改安装后的默认 `system.md`。
-只有 `promptFile` 指向它时，下一轮才读取它。具体说明见 [使用手册](docs/usage.md)。
-这份本地草稿由 Git 忽略；公共源码和 ZIP 不附带它。新用户可留空使用默认正文，
-或选择包内已有的 `plugins/zcode-unrestricted/prompts/example-system.md`，再换成自己的文件。
+可以使用安装后的默认文件，也可以选择自己已有的文件。
 
-## 使用
+- **默认文件**：运行 `edit-prompt.cmd` 编辑。在插件配置中将“系统提示词文件”留空并保存。
+- **自定义文件**：打开插件详情中的 **高级信息 → 配置 → 系统提示词文件**，填写文件的实际绝对路径，例如 `D:\Prompts\system.md`，点击 **保存配置**。
 
-1. 完全退出 ZCode，包括托盘/后台进程。
-2. 双击本目录的 `install.cmd`；脚本检查、备份和安装，默认关闭插件。
-3. 按原来的方式打开 ZCode，在插件设置里找到 **zcode-unrestricted** 并开启。
-4. 正常发送消息：这一轮开始应用你的系统提示词。
+输入框保存的是文件路径；提示词正文应写在该文件中。路径不加外层引号。文件必须非空、采用 UTF-8 编码，大小不超过 256 KiB。读取失败时，本轮恢复原生系统提示词。
 
-若此前还启用了追加上下文版 `zcode-unrestricted-zcode`，先在插件设置中关闭旧版，
-避免同一份正文同时进入 system 和用户附加上下文。
+**用户 / User** 配置作为默认值，**工作区 / Workspace** 的显式配置优先。修改提示词文件或插件开关后，下一轮生效；正在执行的一轮保持原快照。
 
-不需要设置代理、修改模型 Base URL/API key，也不需要独立运行一个 Agent。
-安装脚本只打印普通文字，没有之前 CLI 的终端界面和 ANSI 绘制。
-
-从源码使用 CMD 脚本需要已有 Node.js 24，或本地的 `tools/runtime/node.exe`。
-脚本优先使用随包运行时，否则使用 PATH 中的 Node。运行时二进制保留在本地并由 Git 忽略。
-
-安装时会保留已有正文；首次正文来自本包 `plugins/zcode-unrestricted/prompts/system.md`，
-若包内没有用户正文，则使用明确的示例。当前开发目录已保留旧项目的用户正文。
-
-## 开关、编辑与状态
-
-- **开启/关闭**：使用原版插件设置。下一轮生效；正在执行的一轮保持其原快照。
-- **编辑默认正文**：双击 `edit-prompt.cmd` 用记事本打开。保存为 UTF-8，最多 256 KiB。
-  此脚本始终打开安装后的默认文件；若已选择其他文件，需要直接编辑那个文件。
-- **选择别的文件**：在插件详情的“高级信息 → 配置”中填写 `promptFile` 文件路径，
-  再点击“保存配置”。建议使用绝对路径。字段留空时使用安装后的默认文件。
-- **查看挂载**：双击 `status.cmd`。`mounted` 表示安装文件校验一致；`lastTurn`
-  只表示最近解析的一轮，修改开关后需发送下一轮再查看。`userEnabled` 只显示用户级
-  开关；当前项目最终状态以原版 Workspace 设置与该轮 `lastTurn` 为准。
-  输出中的 `promptFile`、`promptBytes`、`promptHash` 描述默认文件，并不表示高级配置
-  当前选中的文件；`lastTurn.revision` 才是最近一轮解析正文的摘要。
-- **撤销安装**：完全退出 ZCode，双击 `uninstall.cmd`。恢复 Agent 并清理本插件注册，
-  保留提示词 data、原文件备份和安装记录供检查。
-
-默认正文安装到：
+默认提示词的位置：
 
 ```text
 %USERPROFILE%\.zcode\cli\plugins\data\zcode-unrestricted@inline\system.md
 ```
 
-插件包安装到用户持久目录并通过原版 `plugins.dirs` 注册，不依赖开发目录。
-安装器只增加本插件路径和启用键；Provider、其它插件与用户配置保持原样。
+公共仓库只提供 [示例提示词](plugins/zcode-unrestricted/prompts/example-system.md)。首次安装用它初始化默认文件；重新安装会保留已编辑的默认正文。
 
-## 更新与限制
+## 常用脚本
 
-ZCode 更新可能覆盖补丁。此时状态会变为 `unmounted`，原版继续使用原生 system。
-不要把旧备份复制到新版本；卸载器识别未带 Hook 的升级版，只撤销注册，不回写旧 Agent。
-已带 Hook 但发生未知修改的文件会拒绝自动覆盖。
-原始备份和安装记录保存在用户目录的 `.zcode/cli/desktop-patches/zcode-unrestricted/`，
-按安装路径隔离，避免跟随 ZCode 资源目录被更新器删除。
+| 脚本 | 用途 |
+| --- | --- |
+| `install.cmd` | 安装或迁移补丁；运行前完全退出 ZCode。 |
+| `edit-prompt.cmd` | 用记事本编辑安装后的默认提示词。 |
+| `status.cmd` | 检查挂载状态和最近一轮解析记录。 |
+| `uninstall.cmd` | 撤销补丁并清理插件注册，保留提示词、备份和安装记录；运行前完全退出 ZCode。 |
 
-首次安装后需重启；提示词文件与开关下一轮热加载。第一版覆盖 Windows 本地
-普通主会话（包括 Plan/Build），不覆盖远程 Agent、子代理、工作流或专用标题/摘要请求。
-工具 schema、聊天正文和原生权限机制沿用宿主行为。
+`status.cmd` 中的 `state: mounted` 表示安装文件校验通过；`lastTurn.state: active` 表示最近一轮成功读取提示词。核对记录中的工作区和时间，详细字段及排查方法见 [使用手册](docs/usage.md)。
 
-这里只修改客户端送出的 system 文本，模型端对回答的处理取决于原供应商。
+`edit-prompt.cmd` 始终编辑默认文件。选择了自定义文件时，应直接编辑那个文件。
 
-## 开发与验证
+## 兼容范围
+
+当前支持 Windows 本地普通主会话，包括 Plan / Build。子代理、工作流、远程 Agent 和标题、摘要等专用请求尚未覆盖。
+
+ZCode 更新可能覆盖桥接补丁，届时需要重新确认版本适配。请使用安装器和卸载器维护补丁，避免用旧 Agent 备份覆盖新版应用。
+
+插件调整客户端构造的系统提示词；模型服务端的处理规则仍由供应商决定。
+
+## 从旧版升级
+
+已安装旧名 `dsh-unrestricted` 的用户，完全退出 ZCode 后运行新版 `install.cmd`。安装器迁移用户级开关和文件选项，保留旧提示词与备份；已有的新默认正文不会被覆盖。工作区专属设置需在原版 UI 对新名称重新配置。
+
+旧版状态与配置迁移说明见 [使用手册](docs/usage.md)。
+
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [配置与使用说明](docs/usage.md) | 文件选择、配置优先级、状态字段和常见问题。 |
+| [项目目录说明](docs/project-layout.md) | 源文件与安装后文件的用途。 |
+| [设计说明](docs/design.md) | 桥接实现、快照和恢复机制。 |
+| [验证记录](docs/validation.md) | 已完成测试及验证范围。 |
+
+## 开发
+
+在项目目录运行：
 
 ```powershell
-.\tools\runtime\node.exe --test tests/*.test.mjs
-.\tools\runtime\node.exe tools/check.mjs
-.\tools\runtime\node.exe tools/package.mjs
+node --test tests/*.test.mjs
+node tools/check.mjs
+node tools/package.mjs
 ```
 
-测试读取本机适配版本的原始 bundle，所有变更在临时副本里完成。真实桌面会话的
-手动验证与离线验证结果分别记录在 [docs/validation.md](docs/validation.md)。
+离线测试读取本机适配版本的 Agent；已安装补丁时，会校验并读取安装器保存的原始备份。安装与恢复测试在临时副本中执行，不启动真实模型会话。打包输出位于 `dist/`，公共包只包含示例提示词。
 
-私人 `system.md` 和用户保存的提示词草稿保留在本地，由 `.gitignore` 排除。
-公共 ZIP 只包含示例正文，不包含私人 prompt 或整个 `docs` 目录里的草稿。
-`zocde-old`、`artifacts` 和 `dist` 为可清理的本地旧副本或产物，当前源码和公共交付不依赖它们。
+## 许可证
+
+[MIT](LICENSE)
