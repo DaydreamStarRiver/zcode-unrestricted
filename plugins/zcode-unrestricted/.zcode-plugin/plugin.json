@@ -1,0 +1,13 @@
+{
+  "name": "zcode-unrestricted",
+  "version": "0.3.0",
+  "description": "ZCode Unrestricted 系统提示词替换：配合原版桌面 Agent 桥接补丁，开关和正文下一轮生效。",
+  "license": "MIT",
+  "userConfig": {
+    "promptFile": {
+      "type": "file",
+      "title": "系统提示词文件",
+      "description": "可留空使用插件 data/system.md；UTF-8，最多 256 KiB。相对路径以初始工作区解析。"
+    }
+  }
+}
